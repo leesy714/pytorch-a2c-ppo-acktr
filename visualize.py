@@ -111,7 +111,10 @@ def visdom_plot(viz, win, folder, game, name, num_steps, bin_size=100, smooth=1)
     tx, ty = np.array(tx), np.array(ty)
     print(tx.shape)
     print(ty.shape)
-    return viz.line(X=tx, Y=ty, update='replace')
+    if win is not None:
+        return viz.line(X=tx, Y=ty, win=win, update='replace')
+    else:
+        return viz.line(X=tx, Y=ty)
 
     '''
 
