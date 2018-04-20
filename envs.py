@@ -1,5 +1,5 @@
 import os
-
+import numpy as np
 import gym
 from gym.spaces.box import Box
 
@@ -49,8 +49,10 @@ class WrapPyTorch(gym.ObservationWrapper):
         self.observation_space = Box(
             self.observation_space.low[0,0,0],
             self.observation_space.high[0,0,0],
-            [obs_shape[2], obs_shape[1], obs_shape[0]]
+            [obs_shape[2], obs_shape[1], obs_shape[0]],
+            dtype=np.uint8
+
         )
 
-    def _observation(self, observation):
+    def observation(self, observation):
         return observation.transpose(2, 0, 1)
