@@ -52,12 +52,12 @@ class Policy(nn.Module):
 
 
 class CNNPolicy(Policy):
-    def __init__(self, num_inputs, action_space, use_gru):
+    def __init__(self, num_inputs, action_space, use_gru, bias=True):
         super(CNNPolicy, self).__init__()
-        self.conv1 = nn.Conv2d(num_inputs, 32, 8, stride=4)
-        self.conv2 = nn.Conv2d(32, 64, 4, stride=2)
-        self.conv3 = nn.Conv2d(64, 64, 3, stride=1)
-        self.linear1 = nn.Linear(64 * 7 * 7, 512)
+        self.conv1 = nn.Conv2d(num_inputs, 32, 8, stride=4, bias=bias)
+        self.conv2 = nn.Conv2d(32, 64, 4, stride=2, bias=bias)
+        self.conv3 = nn.Conv2d(64, 64, 3, stride=1, bias=bias)
+        self.linear1 = nn.Linear(64 * 7 * 7 , 512, bias=bias )
 
         if use_gru:
             self.gru = nn.GRUCell(512, 512)
@@ -65,6 +65,7 @@ class CNNPolicy(Policy):
         self.critic_linear = nn.Linear(512, 1)
 
         self.dist = get_distribution(512, action_space)
+        self.dist = get_distribution(512, action_space, bias=bias )
 
         self.train()
         self.reset_parameters()

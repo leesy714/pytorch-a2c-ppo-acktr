@@ -8,9 +8,9 @@ from utils import AddBias
 
 
 class Categorical(nn.Module):
-    def __init__(self, num_inputs, num_outputs):
+    def __init__(self, num_inputs, num_outputs, bias=False):
         super(Categorical, self).__init__()
-        self.linear = nn.Linear(num_inputs, num_outputs)
+        self.linear = nn.Linear(num_inputs, num_outputs, bias=bias)
 
     def forward(self, x):
         x = self.linear(x)
@@ -82,11 +82,10 @@ class DiagGaussian(nn.Module):
         return action_log_probs, dist_entropy
 
 
-def get_distribution(num_inputs, action_space):
-    print(action_space)
+def get_distribution(num_inputs, action_space, bias=False):
     if action_space.__class__.__name__ == "Discrete":
         num_outputs = action_space.n
-        dist = Categorical(num_inputs, num_outputs)
+        dist = Categorical(num_inputs, num_outputs, bias=bias)
     elif action_space.__class__.__name__ == "Box":
         num_outputs = action_space.shape[0]
         dist = DiagGaussian(num_inputs, num_outputs)
