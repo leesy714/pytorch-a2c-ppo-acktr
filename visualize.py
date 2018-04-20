@@ -102,9 +102,18 @@ color_defaults = [
 
 
 def visdom_plot(viz, win, folder, game, name, num_steps, bin_size=100, smooth=1):
+    
     tx, ty = load_data(folder, smooth, bin_size)
+    if tx is not None:
+        print(len(tx),len(ty))
     if tx is None or ty is None:
         return win
+    tx, ty = np.array(tx), np.array(ty)
+    print(tx.shape)
+    print(ty.shape)
+    return viz.line(X=tx, Y=ty, update='replace')
+
+    '''
 
     fig = plt.figure()
     plt.plot(tx, ty, label="{}".format(name))
@@ -130,7 +139,7 @@ def visdom_plot(viz, win, folder, game, name, num_steps, bin_size=100, smooth=1)
     # Show it in visdom
     image = np.transpose(image, (2, 0, 1))
     return viz.image(image, win=win)
-
+    '''
 
 if __name__ == "__main__":
     from visdom import Visdom

@@ -10,11 +10,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
+from torch.nn.parameter import Parameter
 
 from arguments import get_args
 from baselines.common.vec_env.dummy_vec_env import DummyVecEnv
 from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 from baselines.common.vec_env.vec_normalize import VecNormalize
+from utils import load_ga_model
 from envs import make_env
 from kfac import KFACOptimizer
 from model import CNNPolicy, MLPPolicy
@@ -61,12 +63,13 @@ def main():
         envs = SubprocVecEnv(envs)
     else:
         envs = DummyVecEnv(envs)
-
     if len(envs.observation_space.shape) == 1:
         envs = VecNormalize(envs)
 
     obs_shape = envs.observation_space.shape
     obs_shape = (obs_shape[0] * args.num_stack, *obs_shape[1:])
+
+    print(envs.observation_space.shape)
 
     if len(envs.observation_space.shape) == 3:
         actor_critic = CNNPolicy(obs_shape[0], envs.action_space, args.recurrent_policy)
@@ -79,7 +82,9 @@ def main():
         action_shape = 1
     else:
         action_shape = envs.action_space.shape[0]
-
+    if args.resume is not None:
+        load_ga_model(actor_critic, args.resume)
+        
     if args.cuda:
         actor_critic.cuda()
 
@@ -117,10 +122,11 @@ def main():
     for j in range(num_updates):
         for step in range(args.num_steps):
             # Sample actions
-            value, action, action_log_prob, states = actor_critic.act(
-                    Variable(rollouts.observations[step], volatile=True),
-                    Variable(rollouts.states[step], volatile=True),
-                    Variable(rollouts.masks[step], volatile=True))
+            with torch.no_grad():
+                value, action, action_log_prob, states = actor_critic.act(
+                        Variable(rollouts.observations[step]),
+                        Variable(rollouts.states[step]),
+                        Variable(rollouts.masks[step]))
             cpu_actions = action.data.squeeze(1).cpu().numpy()
 
             # Obser reward and next obs
@@ -144,10 +150,10 @@ def main():
 
             update_current_obs(obs)
             rollouts.insert(current_obs, states.data, action.data, action_log_prob.data, value.data, reward, masks)
-
-        next_value = actor_critic.get_value(Variable(rollouts.observations[-1], volatile=True),
-                                            Variable(rollouts.states[-1], volatile=True),
-                                            Variable(rollouts.masks[-1], volatile=True)).data
+        with torch.no_grad():
+            next_value = actor_critic.get_value(Variable(rollouts.observations[-1]),
+                                                Variable(rollouts.states[-1]),
+                                                Variable(rollouts.masks[-1]).data)
 
         rollouts.compute_returns(next_value, args.use_gae, args.gamma, args.tau)
 
@@ -255,8 +261,8 @@ def main():
                        final_rewards.mean(),
                        final_rewards.median(),
                        final_rewards.min(),
-                       final_rewards.max(), dist_entropy.data[0],
-                       value_loss.data[0], action_loss.data[0]))
+                       final_rewards.max(), dist_entropy.data.item(),
+                       value_loss.data.item(), action_loss.data.item()))
         if args.vis and j % args.vis_interval == 0:
             try:
                 # Sometimes monitor doesn't properly flush the outputs

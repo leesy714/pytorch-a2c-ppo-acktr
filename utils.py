@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.nn.parameter import Parameter
 
 
 # Necessary for my KFAC implementation.
@@ -43,3 +44,17 @@ def orthogonal(tensor, gain=1):
     tensor.view_as(q).copy_(q)
     tensor.mul_(gain)
     return tensor
+
+def load_ga_model(actor_critic, ga_model_path):
+    model = torch.load(ga_model_path)
+    actor_critic.conv1.weight = Parameter(model.conv1.weight)
+    actor_critic.conv1.bias = Parameter(model.conv1.bias)
+    actor_critic.conv2.weight = Parameter(model.conv2.weight)
+    actor_critic.conv2.bias = Parameter(model.conv2.bias)
+    actor_critic.conv3.weight = Parameter(model.conv3.weight)
+    actor_critic.conv3.bias = Parameter(model.conv3.bias)
+    actor_critic.linear1.weight = Parameter(model.dense.weight)
+    actor_critic.linear1.bias = Parameter(model.dense.bias)
+    actor_critic.dist.linear.weight = Parameter(model.out.weight)
+    actor_critic.dist.linear.bias = Parameter(model.out.bias)
+

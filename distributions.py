@@ -48,7 +48,8 @@ class DiagGaussian(nn.Module):
         action_mean = self.fc_mean(x)
 
         #  An ugly hack for my KFAC implementation.
-        zeros = Variable(torch.zeros(action_mean.size()), volatile=x.volatile)
+        zeros = Variable(torch.zeros(action_mean.size()))
+
         if x.is_cuda:
             zeros = zeros.cuda()
 
@@ -82,6 +83,7 @@ class DiagGaussian(nn.Module):
 
 
 def get_distribution(num_inputs, action_space):
+    print(action_space)
     if action_space.__class__.__name__ == "Discrete":
         num_outputs = action_space.n
         dist = Categorical(num_inputs, num_outputs)

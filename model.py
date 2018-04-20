@@ -54,18 +54,17 @@ class Policy(nn.Module):
 class CNNPolicy(Policy):
     def __init__(self, num_inputs, action_space, use_gru):
         super(CNNPolicy, self).__init__()
-        self.conv1 = nn.Conv2d(num_inputs, 16, 8, stride=4)
-        self.conv2 = nn.Conv2d(16, 32, 4, stride=2)
-        #self.conv3 = nn.Conv2d(64, 32, 3, stride=1)
-
-        self.linear1 = nn.Linear(32 * 9 * 9, 256)
+        self.conv1 = nn.Conv2d(num_inputs, 32, 8, stride=4)
+        self.conv2 = nn.Conv2d(32, 64, 4, stride=2)
+        self.conv3 = nn.Conv2d(64, 64, 3, stride=1)
+        self.linear1 = nn.Linear(64 * 7 * 7, 512)
 
         if use_gru:
-            self.gru = nn.GRUCell(256, 256)
+            self.gru = nn.GRUCell(512, 512)
 
-        self.critic_linear = nn.Linear(256, 1)
+        self.critic_linear = nn.Linear(512, 1)
 
-        self.dist = get_distribution(256, action_space)
+        self.dist = get_distribution(512, action_space)
 
         self.train()
         self.reset_parameters()
@@ -83,7 +82,7 @@ class CNNPolicy(Policy):
         relu_gain = nn.init.calculate_gain('relu')
         self.conv1.weight.data.mul_(relu_gain)
         self.conv2.weight.data.mul_(relu_gain)
-        #self.conv3.weight.data.mul_(relu_gain)
+        self.conv3.weight.data.mul_(relu_gain)
         self.linear1.weight.data.mul_(relu_gain)
 
         if hasattr(self, 'gru'):
@@ -98,14 +97,11 @@ class CNNPolicy(Policy):
     def forward(self, inputs, states, masks):
         x = self.conv1(inputs / 255.0)
         x = F.relu(x)
-
         x = self.conv2(x)
         x = F.relu(x)
-
-        #x = self.conv3(x)
-        #x = F.relu(x)
-
-        x = x.view(-1, 32 * 9 * 9)
+        x = self.conv3(x)
+        x = F.relu(x)
+        x = x.view(x.size(0), -1)
         x = self.linear1(x)
         x = F.relu(x)
 

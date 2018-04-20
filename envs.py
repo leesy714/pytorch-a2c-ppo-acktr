@@ -1,4 +1,5 @@
 import os
+import numpy as np
 
 import gym
 from gym.spaces.box import Box
@@ -18,7 +19,7 @@ except ImportError:
     pass
 
 
-def make_env(env_id, seed, rank, log_dir):
+def make_env(env_id, seed, rank, log_dir, clip_rewards=False):
     def _thunk():
         if env_id.startswith("dm"):
             _, domain, task = env_id.split('.')
@@ -32,25 +33,30 @@ def make_env(env_id, seed, rank, log_dir):
         if log_dir is not None:
             env = bench.Monitor(env, os.path.join(log_dir, str(rank)))
         if is_atari:
-            env = wrap_deepmind(env)
+            env = wrap_deepmind(env, clip_rewards=clip_rewards)
         # If the input has shape (W,H,3), wrap for PyTorch convolutions
         obs_shape = env.observation_space.shape
         if len(obs_shape) == 3 and obs_shape[2] in [1, 3]:
-            env = WrapPyTorch(env)
+            env = WrapPyTorch(env, is_atari=is_atari)
         return env
 
     return _thunk
 
 
 class WrapPyTorch(gym.ObservationWrapper):
-    def __init__(self, env=None):
+    def __init__(self, env=None, is_atari=False):
         super(WrapPyTorch, self).__init__(env)
         obs_shape = self.observation_space.shape
+        if is_atari:
+            dtype=np.uint8
+        else:
+            dtype=np.float32
         self.observation_space = Box(
             self.observation_space.low[0,0,0],
             self.observation_space.high[0,0,0],
-            [obs_shape[2], obs_shape[1], obs_shape[0]]
+            [obs_shape[2], obs_shape[1], obs_shape[0]],
+            dtype=dtype
         )
 
-    def _observation(self, observation):
+    def observation(self, observation):
         return observation.transpose(2, 0, 1)
